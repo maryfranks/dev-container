@@ -1,0 +1,30 @@
+# User-specific local configuration (copy from config.example.toml)
+config.toml
+*.local.toml
+
+# Local environment / secret overrides
+.env
+.env.*
+!.env.example
+
+# Local overrides for built-in agent configs
+agent-configs/*/*.local.json
+
+# Profile-level local overrides
+profiles/*/gitconfig.local
+profiles/*/zshrc.local
+
+# Host-specific Ansible inventory (copy from ansible/inventory/hosts.example.yaml)
+ansible/inventory/hosts.yaml
+
+# Python & cache artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# OS & editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~

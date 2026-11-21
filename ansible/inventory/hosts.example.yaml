@@ -1,0 +1,9 @@
+all:
+  vars:
+    ansible_user: dev
+    ansible_ssh_common_args: "-o ForwardAgent=yes"
+  hosts:
+    example-box:
+      ansible_host: example-box.internal
+    example-box-2:
+      ansible_host: example-box-2.internal

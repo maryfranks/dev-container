@@ -1,0 +1,28 @@
+# =====================================================================
+# DEFAULT PROFILE: GIT CONFIGURATION
+# =====================================================================
+# Active profile [profiles.<name>] identity (git_name / git_email) is
+# written to ~/.gitconfig.local by bootstrap.sh and included below.
+# =====================================================================
+
+[user]
+	name = Your Name
+	email = you@example.com
+
+[branch]
+	autoSetupRebase = always
+
+[pull]
+	rebase = true
+
+[push]
+	autoSetupRemote = true
+
+[init]
+	defaultBranch = main
+
+[alias]
+	logline = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+
+[include]
+	path = ~/.gitconfig.local

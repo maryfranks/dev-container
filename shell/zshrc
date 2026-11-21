@@ -1,0 +1,98 @@
+# =====================================================================
+# COMMON SHELL LAYER (Sourced by profiles/<name>/zshrc)
+# =====================================================================
+
+# Load generated runtime configuration (profile, enabled modules, [env])
+if [[ -r "$HOME/.config/devcontainer/runtime.zsh" ]]; then
+    source "$HOME/.config/devcontainer/runtime.zsh"
+fi
+
+if [[ -z "${DEVCONTAINER_REPO_DIR:-}" ]]; then
+    DEVCONTAINER_REPO_DIR="${${(%):-%x}:A:h:h}"
+fi
+
+# --- Local Binary Path & Terminal Colors ---
+export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
+export CLICOLOR=1
+export COLORTERM=truecolor
+
+# --- History Management ---
+export HISTFILE="$HOME/.zsh_history"
+export HISTSIZE=10000
+export SAVEHIST=10000
+
+HISTDUP=erase
+setopt hist_ignore_dups
+setopt hist_ignore_all_dups
+setopt hist_save_no_dups
+setopt hist_find_no_dups
+setopt appendhistory
+setopt sharehistory
+setopt incappendhistory
+
+# --- Locale Sort Order ---
+export LC_COLLATE=C
+
+# --- Core Safety & Git Aliases ---
+alias ll='ls -lah'
+alias mv='mv -i'
+alias cp='cp -i'
+alias reload='source ~/.zshrc'
+
+alias gst='git status'
+alias gaa='git add --all'
+alias gcm='git commit -m'
+alias gnb='git checkout -b'
+alias gpsh='git push'
+
+# --- Completion Initialization ---
+autoload -Uz compinit && compinit -i
+
+# --- Guarded Modular Language & Tool Loaders ---
+_devcontainer_module_available() {
+    local mod="$1"
+    case "$mod" in
+        node)
+            command -v node >/dev/null 2>&1 || command -v bun >/dev/null 2>&1
+            ;;
+        python)
+            command -v python3 >/dev/null 2>&1 || command -v python >/dev/null 2>&1
+            ;;
+        *)
+            command -v "$mod" >/dev/null 2>&1
+            ;;
+    esac
+}
+
+_devcontainer_load_modules() {
+    local kind="$1"
+    shift
+    local mod candidate
+    for mod in "$@"; do
+        _devcontainer_module_available "$mod" || continue
+
+        if [[ -n "${DEVCONTAINER_DOTFILES_DIR:-}" && -r "${DEVCONTAINER_DOTFILES_DIR}/shell/${kind}/${mod}.zsh" ]]; then
+            candidate="${DEVCONTAINER_DOTFILES_DIR}/shell/${kind}/${mod}.zsh"
+        elif [[ -r "${DEVCONTAINER_REPO_DIR}/shell/${kind}/${mod}.zsh" ]]; then
+            candidate="${DEVCONTAINER_REPO_DIR}/shell/${kind}/${mod}.zsh"
+        else
+            continue
+        fi
+
+        source "$candidate"
+    done
+}
+
+if (( ${#DEVCONTAINER_MODULES_LANGUAGES[@]} )); then
+    _devcontainer_load_modules "languages" "${DEVCONTAINER_MODULES_LANGUAGES[@]}"
+fi
+
+if (( ${#DEVCONTAINER_MODULES_TOOLS[@]} )); then
+    _devcontainer_load_modules "tools" "${DEVCONTAINER_MODULES_TOOLS[@]}"
+fi
+
+# --- Prompt Initialization ---
+if command -v starship >/dev/null 2>&1; then
+    export STARSHIP_CONFIG="${STARSHIP_CONFIG:-$HOME/.config/starship.toml}"
+    eval "$(starship init zsh)"
+fi

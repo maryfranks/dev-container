@@ -1,0 +1,120 @@
+---
+- name: Build and Launch Modular Dev Container
+  hosts: all
+  vars:
+    workspaces_dir: /workspaces
+    repo_name: devcontainer
+    repo_url: git@github.com:<owner>/devcontainer.git
+    repo_branch: main
+    local_config_path: "{{ playbook_dir }}/../config.toml"
+    image_name: "<your-dockerhub-user>/devcontainer:latest"
+    push_image: false
+
+  tasks:
+    # -----------------------------------------------------------------
+    # Optional image build & push workflow (`--tags build`)
+    # -----------------------------------------------------------------
+    - name: Verify local config.toml exists before reading build username
+      ansible.builtin.stat:
+        path: "{{ local_config_path }}"
+      register: build_config_stat
+      delegate_to: localhost
+      run_once: true
+      tags: [never, build]
+
+    - name: Fail if config.toml is missing before image build
+      ansible.builtin.fail:
+        msg: "Missing {{ local_config_path }}. Run: cp config.example.toml config.toml"
+      when: not build_config_stat.stat.exists
+      delegate_to: localhost
+      run_once: true
+      tags: [never, build]
+
+    - name: Read [core].username from config.toml
+      ansible.builtin.command:
+        cmd: python3 -B "{{ playbook_dir }}/../scripts/read-config.py" --config "{{ local_config_path }}" --get core.username
+      register: build_username_cmd
+      changed_when: false
+      delegate_to: localhost
+      run_once: true
+      tags: [never, build]
+
+    - name: Build container image from root Dockerfile
+      ansible.builtin.command:
+        cmd: >
+          docker build
+          --build-arg USERNAME={{ build_username_cmd.stdout | trim }}
+          -t {{ image_name }}
+          "{{ playbook_dir }}/.."
+      changed_when: true
+      delegate_to: localhost
+      run_once: true
+      tags: [never, build]
+
+    - name: Push container image to registry when push_image=true
+      ansible.builtin.command:
+        cmd: docker push {{ image_name }}
+      when: push_image | bool
+      changed_when: true
+      delegate_to: localhost
+      run_once: true
+      tags: [never, build]
+
+    # -----------------------------------------------------------------
+    # Default runtime sync & devcontainer startup on target hosts
+    # -----------------------------------------------------------------
+    - name: Verify local config.toml exists on controller
+      ansible.builtin.stat:
+        path: "{{ local_config_path }}"
+      register: local_config_stat
+      delegate_to: localhost
+      run_once: true
+
+    - name: Fail if local config.toml is missing
+      ansible.builtin.fail:
+        msg: "Missing {{ local_config_path }}. Run: cp config.example.toml config.toml"
+      when: not local_config_stat.stat.exists
+      delegate_to: localhost
+      run_once: true
+
+    - name: Ensure /workspaces exists and is owned by the remote user
+      become: true
+      ansible.builtin.file:
+        path: "{{ workspaces_dir }}"
+        state: directory
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_id }}"
+        mode: "0755"
+
+    - name: Check that the Dev Containers CLI is installed on target host
+      ansible.builtin.command:
+        cmd: which devcontainer
+      register: devcontainer_cli_check
+      changed_when: false
+      failed_when: false
+
+    - name: Require devcontainer CLI on target host (bare VM install is on roadmap)
+      ansible.builtin.fail:
+        msg: "devcontainer CLI was not found on {{ inventory_hostname }}. Install Docker and @devcontainers/cli first."
+      when: devcontainer_cli_check.rc != 0
+
+    - name: Clone or update repository on target host
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ workspaces_dir }}/{{ repo_name }}"
+        version: "{{ repo_branch }}"
+        update: true
+
+    - name: Copy local config.toml to target workspace for postCreateCommand
+      ansible.builtin.copy:
+        src: "{{ local_config_path }}"
+        dest: "{{ workspaces_dir }}/{{ repo_name }}/config.toml"
+        mode: "0600"
+
+    - name: Start Dev Container with /workspaces mounted
+      ansible.builtin.command:
+        cmd: >
+          devcontainer up
+          --workspace-folder "{{ workspaces_dir }}/{{ repo_name }}"
+          --mount "type=bind,source={{ workspaces_dir }},target=/workspaces"
+      changed_when: true

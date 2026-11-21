@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "command(ls)",
+      "command(ls *)",
+      "command(grep)",
+      "command(rg)",
+      "command(find)",
+      "command(find *)",
+      "command(head)",
+      "command(git status)",
+      "command(git status *)",
+      "command(git log)",
+      "command(git log *)",
+      "command(git diff)",
+      "command(git diff *)",
+      "command(git show)",
+      "command(git branch)",
+      "command(git switch)",
+      "command(git fetch)",
+      "command(uv *)",
+      "command(pytest *)",
+      "read_file(~/.agents/)",
+      "read_file(~/.gemini/)"
+    ],
+    "deny": [
+      "command(rm -rf *)",
+      "command(git push --force*)",
+      "command(git push -f*)",
+      "command(sudo *)"
+    ],
+    "ask": [
+      "command(git push)",
+      "command(git push *)",
+      "command(git reset --hard*)"
+    ]
+  },
+  "trustedWorkspaces": []
+}

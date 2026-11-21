@@ -1,0 +1,125 @@
+# =====================================================================
+# DEV CONTAINER CONFIGURATION TEMPLATE
+# =====================================================================
+# PREREQUISITE: Copy this file to `config.toml` (which is gitignored) and
+# configure your profile BEFORE building or launching the container.
+# `bootstrap.sh` exits with an error if `config.toml` is missing.
+#
+# Leave external repo/path fields blank to use this repo's built-in files.
+#
+# Symlink behavior note:
+# - Shell/editor/git files (zshrc, gitconfig, starship.toml, vimrc, tmux.conf)
+#   are symlinked as individual files so layers can compose cleanly.
+# - Agent directories (~/.agents and agent CLI config dirs) are symlinked as
+#   whole directories because agents write/rotate files inside them at runtime.
+# - Existing targets that do not already point to the expected source are
+#   backed up with a `.bak.<timestamp>` suffix before linking.
+# =====================================================================
+
+[core]
+# Optional default profile name matching a `[profiles.<name>]` table below
+# (for example, "default", "personal", "work", "client_a", etc.).
+# Set to a profile name (e.g., "default") if you want automatic selection at
+# container creation, or leave blank ("") to require `--profile` / `PROFILE`.
+default_profile = ""
+
+# Container username passed as `--build-arg USERNAME=<name>` during image builds
+# (`docker build` or `ansible/playbook.yaml --tags build`). Update `"remoteUser"` in
+# `.devcontainer/devcontainer.json` to match when changing this from "dev".
+username = "dev"
+
+# Define any profile names you want under `[profiles.<name>]`.
+# You can use a single profile (e.g., `[profiles.default]`) or separate profiles
+# (e.g., `[profiles.personal]`, `[profiles.work]`, per-client, or per-workflow).
+[profiles.default]
+git_name = "Your Name"
+git_email = "you@example.com"
+
+# Example additional profile:
+# [profiles.work]
+# git_name = "Your Name"
+# git_email = "you@company.com"
+
+[sources]
+# Optional: "Bring your own dotfiles" repository or local checkout path.
+# If `dotfiles_repo` is set and `dotfiles_dir` does not exist yet, bootstrap clones it.
+# When set, profile files (zshrc, gitconfig, starship.toml, vimrc, tmux.conf) are
+# checked in your external dotfiles first (`profiles/<name>/<file>`), falling back
+# to this repo's `profiles/<name>/`, `profiles/default/`, and `shell/` defaults.
+#
+# IMPORTANT (GitHub Codespaces): Pick ONE dotfiles mechanism—either use
+# `[sources].dotfiles_repo` here OR GitHub's account-level Codespaces Dotfiles
+# setting, not both (otherwise both will symlink `$HOME/.zshrc` and `.gitconfig`).
+dotfiles_repo = ""
+dotfiles_dir = ""
+
+# Optional follow-up setup script from your dotfiles (or external path) that runs
+# *after* this repo's main bootstrap finishes (symlinks, modules, and agent setup).
+# Specify a path relative to `dotfiles_dir` (or a direct path) when needed.
+post_setup_script = ""
+
+[modules]
+# Modular scripts sourced from `shell/languages/<name>.zsh` and `shell/tools/<name>.zsh`.
+# Each loader checks `command -v` before activating so missing tools won't error.
+languages = ["node", "python"]
+tools = ["fzf", "uv"]
+
+[agents]
+# Agent-agnostic shared content bundle: AGENTS.md, skills/, roles/, rules/, templates/
+# Example: an agent config can reference `@~/.agents/AGENTS.md` to stay agnostic.
+# Leave `repo` and `dir` blank to initialize a minimal local `~/.agents` directory
+# (`AGENTS.md` and `skills/`) if missing; set them to clone/link an external
+# shared agents repository into `target_dir` as a whole directory.
+repo = ""
+dir = ""
+target_dir = "~/.agents"
+
+# Agent CLI configurations:
+# - When `config_repo` and `config_dir` are blank, `agents.sh` symlinks target CLI
+#   paths to this repo's built-in defaults (`agent-configs/antigravity-cli` and
+#   `agent-configs/antigravity-config`).
+# - When `config_repo` or `config_dir` is set, `agents.sh` skips `agent-configs/`
+#   completely and symlinks target CLI paths directly to your external repo/dir
+#   so this repository's `git status` stays clean.
+# - Path resolution rule: `settings`, `config`, `extra_config_dir_1`, and
+#   `extra_config_dir_2` are relative to `config_dir`/`config_repo` when set,
+#   and relative to this repository root when blank.
+# - Supports a primary `config` directory plus up to two extra directories
+#   (`extra_config_dir_1`, `extra_config_dir_2`) so tools like Claude or Codex can
+#   map their directories now before dedicated presets are added on the roadmap.
+[agents.agy]
+enabled = true
+config_repo = ""
+config_dir = ""
+settings = "agent-configs/antigravity-cli"
+config = "agent-configs/antigravity-config"
+extra_config_dir_1 = ""
+extra_config_dir_2 = ""
+target_settings_dir = "~/.gemini/antigravity-cli"
+target_config_dir = "~/.gemini/config"
+target_extra_dir_1 = ""
+target_extra_dir_2 = ""
+
+# Example pattern for adapting another agent CLI before built-in presets exist
+# (set paths relative to `config_dir`/`config_repo` if used, or repo root if blank):
+# [agents.custom_cli]
+# enabled = false
+# config_repo = ""
+# config_dir = ""
+# settings = ""
+# config = ""
+# extra_config_dir_1 = ""
+# extra_config_dir_2 = ""
+# target_settings_dir = ""
+# target_config_dir = ""
+# target_extra_dir_1 = ""
+# target_extra_dir_2 = ""
+
+[env]
+# Optional environment variables for runtimes without automatic credential injection.
+# This repo does not manage or inject secrets itself:
+# - GitHub Codespaces handles GitHub auth/repos (and supports `customizations.codespaces.repositories`).
+# - `prized.dev` uses SSH agent forwarding / passthrough (`SSH_AUTH_SOCK`).
+# - Standalone secret workflows (e.g., `op` / 1Password) and bare VM provisioning are on the roadmap.
+# Example:
+# CUSTOM_VAR = ""

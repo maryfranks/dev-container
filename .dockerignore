@@ -1,0 +1,32 @@
+# Version control & editor artifacts
+.git
+.gitignore
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Local user configuration & secrets (mounted or copied at runtime, never baked into image)
+config.toml
+*.local.toml
+.env
+.env.*
+!.env.example
+
+# Local overrides not meant to be baked into the image
+agent-configs/local/
+agent-configs/*/*.local.json
+profiles/*/gitconfig.local
+profiles/*/zshrc.local
+
+# Documentation & host provisioning not needed in the image build
+README.md
+plan.md
+agent-configs/README.md
+ansible/
+tests/
+
+# Python cache artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/

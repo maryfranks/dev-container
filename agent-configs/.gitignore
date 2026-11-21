@@ -1,0 +1,10 @@
+*
+!.gitignore
+!README.md
+!antigravity-cli/
+!antigravity-config/
+antigravity-cli/*
+antigravity-config/*
+!antigravity-cli/settings.json
+!antigravity-config/skills.json
+!antigravity-config/AGENTS.md

@@ -1,0 +1,24 @@
+# =====================================================================
+# DEFAULT PROFILE SHELL ENTRYPOINT (Symlinked to ~/.zshrc)
+# =====================================================================
+
+if [[ -r "$HOME/.config/devcontainer/runtime.zsh" ]]; then
+    source "$HOME/.config/devcontainer/runtime.zsh"
+fi
+
+if [[ -z "${DEVCONTAINER_REPO_DIR:-}" ]]; then
+    DEVCONTAINER_REPO_DIR="${${(%):-%x}:A:h:h:h}"
+fi
+
+# Load shared baseline shell layer and guarded [modules]
+if [[ -r "$DEVCONTAINER_REPO_DIR/shell/zshrc" ]]; then
+    source "$DEVCONTAINER_REPO_DIR/shell/zshrc"
+fi
+
+# --- Profile Overrides ---
+# Add aliases, exports, or tool customizations for this profile below.
+
+# --- Machine-Local Overrides (Gitignored) ---
+if [[ -r "$HOME/.zshrc.local" ]]; then
+    source "$HOME/.zshrc.local"
+fi

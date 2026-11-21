@@ -1,0 +1,35 @@
+" =====================================================================
+" SHARED DEFAULT VIM CONFIGURATION
+" =====================================================================
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+if has('termguicolors')
+    set termguicolors
+endif
+
+" Basic UI & behavior
+set number
+set showcmd
+set hlsearch
+set incsearch
+set history=100
+set autowrite
+set cursorline
+
+" Indentation & tabs (4-space default)
+set tabstop=8
+set softtabstop=0
+set expandtab
+set shiftwidth=4
+set smarttab
+set autoindent
+set smartindent
+
+" 2-space indentation for configuration and markup formats
+autocmd FileType yaml,json,toml setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+
+" Git commit message formatting
+autocmd FileType gitcommit setlocal spell textwidth=72

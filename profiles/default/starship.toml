@@ -1,0 +1,28 @@
+# =====================================================================
+# DEFAULT CONTAINER STARSHIP PROMPT
+# =====================================================================
+
+format = """
+$directory$git_branch$git_status$fill
+[~~>](bold #5f87af) """
+
+[fill]
+symbol = " "
+
+[directory]
+style = "bold #5f87af"
+
+[git_branch]
+style = "bold #5f5f87"
+
+[git_status]
+style = "bold #5f5f87"
+staged = '[++\($count\)](bold #5f5f87)'
+modified = '[++\($count\)](bold #5f5f87)'
+untracked = '[++\($count\)](bold #5f5f87)'
+
+[gcloud]
+disabled = true
+
+[kubernetes]
+disabled = true
