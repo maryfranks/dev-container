@@ -131,7 +131,7 @@ def test_gitignore_whitelists(tmp_path: Path) -> None:
     run(["git", "-C", str(git_repo), "add", "-A"])
     staged = set(run(["git", "-C", str(git_repo), "diff", "--cached", "--name-only"]).stdout.splitlines())
     for expected in ("bootstrap.sh", "Dockerfile", "config.example.toml", "tests/smoke_test.py", "agent-configs/.gitignore",
-                     "agent-configs/README.md", "agent-configs/antigravity-cli/settings.json", "agent-configs/antigravity-config/AGENTS.md", "agent-configs/antigravity-config/skills.json"):
+                     "agent-configs/antigravity-cli/settings.json", "agent-configs/antigravity-config/AGENTS.md", "agent-configs/antigravity-config/skills.json"):
         assert expected in staged, f"Missing expected tracked file: {expected}"
     print("PASS Test 7: git init + .gitignore / agent-configs/.gitignore whitelist tracks core & starter files")
 

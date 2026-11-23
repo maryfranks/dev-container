@@ -1,6 +1,5 @@
 *
 !.gitignore
-!README.md
 !antigravity-cli/
 !antigravity-config/
 antigravity-cli/*
