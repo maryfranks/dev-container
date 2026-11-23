@@ -25,24 +25,7 @@ READ_ARGS=(--config "$CONFIG_PATH")
 config_eval="$(python3 -B "$REPO_DIR/scripts/read-config.py" "${READ_ARGS[@]}")"
 eval "$config_eval"
 
-expand_path() {
-    case "$1" in
-        "~") printf '%s\n' "$HOME" ;;
-        "~/"*) printf '%s\n' "$HOME/${1:2}" ;;
-        *) printf '%s\n' "$1" ;;
-    esac
-}
-
-make_backup_path() {
-    local stamp candidate counter=1
-    stamp="$(date +%Y%m%d%H%M%S)"
-    candidate="${1}.bak.${stamp}"
-    while [[ -e "$candidate" || -L "$candidate" ]]; do
-        candidate="${1}.bak.${stamp}.${counter}"
-        counter=$((counter + 1))
-    done
-    printf '%s\n' "$candidate"
-}
+source "$SCRIPT_DIR/lib.sh"
 
 EXTERNAL_DOTFILES_DIR=""
 if [[ -n "$CLI_DOTFILES_DIR" ]]; then
