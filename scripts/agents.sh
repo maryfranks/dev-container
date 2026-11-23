@@ -46,6 +46,48 @@ safe_link_dir() {
     echo "[link]   $dst_dir -> $resolved_src"
 }
 
+safe_link_item() {
+    local src="$1" dst="$2" resolved_src resolved_dst backup_path
+    if [[ ! -e "$src" ]]; then
+        echo "[skip]   Missing agent source item: $src"
+        return 0
+    fi
+    resolved_src="$(readlink -f "$src")"
+    mkdir -p "$(dirname "$dst")"
+
+    if [[ -L "$dst" && -e "$dst" ]]; then
+        resolved_dst="$(readlink -f "$dst")"
+        if [[ "$resolved_dst" == "$resolved_src" ]]; then
+            echo "[ok]     $dst -> $resolved_src"
+            return 0
+        fi
+    fi
+    if [[ -e "$dst" || -L "$dst" ]]; then
+        backup_path="$(make_backup_path "$dst")"
+        mv "$dst" "$backup_path"
+        echo "[backup] $dst -> $backup_path"
+    fi
+    ln -s "$resolved_src" "$dst"
+    echo "[link]   $dst -> $resolved_src"
+}
+
+setup_agy_config_links() {
+    local target_config_dir agents_dir backup_path item
+    target_config_dir="$(expand_path "$1")"
+    agents_dir="$(expand_path "${CFG_AGENTS_TARGET_DIR:-~/.agents}")"
+
+    if [[ -L "$target_config_dir" || ( -e "$target_config_dir" && ! -d "$target_config_dir" ) ]]; then
+        backup_path="$(make_backup_path "$target_config_dir")"
+        mv "$target_config_dir" "$backup_path"
+        echo "[backup] $target_config_dir -> $backup_path"
+    fi
+    mkdir -p "$target_config_dir"
+
+    for item in skills roles AGENTS.md; do
+        safe_link_item "$agents_dir/$item" "$target_config_dir/$item"
+    done
+}
+
 setup_shared_agents_bundle() {
     local target_dir src_dir backup_path
     target_dir="$(expand_path "${CFG_AGENTS_TARGET_DIR:-~/.agents}")"
@@ -64,7 +106,7 @@ setup_shared_agents_bundle() {
         echo "[backup] $target_dir -> $backup_path"
     fi
 
-    mkdir -p "$target_dir/skills"
+    mkdir -p "$target_dir/skills" "$target_dir/roles"
     if [[ ! -e "$target_dir/AGENTS.md" ]]; then
         printf '%s\n' \
             "# Shared Agent Instructions" "" \
@@ -135,7 +177,11 @@ setup_agent_clis() {
         for slot in "SETTINGS:TARGET_SETTINGS:settings" "CONFIG:TARGET_CONFIG:config" "EXTRA_1:TARGET_EXTRA_1:extra_config_dir_1" "EXTRA_2:TARGET_EXTRA_2:extra_config_dir_2"; do
             IFS=: read -r src_key dst_key label <<<"$slot"
             v_src="${prefix}_${src_key}"; v_dst="${prefix}_${dst_key}"
-            link_agent_slot "$name" "$label" "${!v_src}" "${!v_dst}" "$source_base" "$is_external"
+            if [[ "$name" == "agy" && "$label" == "config" && -z "${!v_src}" && -n "${!v_dst}" ]]; then
+                setup_agy_config_links "${!v_dst}"
+            else
+                link_agent_slot "$name" "$label" "${!v_src}" "${!v_dst}" "$source_base" "$is_external"
+            fi
         done
     done
 }
