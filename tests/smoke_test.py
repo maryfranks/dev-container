@@ -68,9 +68,12 @@ def test_default_bootstrap_and_zsh(repo: Path, tmp_path: Path) -> None:
     run([str(repo / "bootstrap.sh"), "--profile", "work"], env={"HOME": str(home)})
     assert all((home / rel).is_symlink() and (home / rel).exists() for rel in (".zshrc", ".gitconfig", ".config/starship.toml", ".vimrc", ".tmux.conf"))
     assert (home / ".gemini" / "antigravity-cli").resolve() == (repo / "agent-configs" / "antigravity-cli").resolve()
-    assert (home / ".gemini" / "config").resolve() == (repo / "agent-configs" / "antigravity-config").resolve()
+    assert (home / ".gemini" / "config").is_dir() and not (home / ".gemini" / "config").is_symlink()
     assert (home / ".agents").is_dir() and not (home / ".agents").is_symlink()
-    assert (home / ".agents" / "skills").is_dir() and (home / ".agents" / "AGENTS.md").is_file()
+    assert (home / ".agents" / "skills").is_dir() and (home / ".agents" / "roles").is_dir() and (home / ".agents" / "AGENTS.md").is_file()
+    for item in ("skills", "roles", "AGENTS.md"):
+        link = home / ".gemini" / "config" / item
+        assert link.is_symlink() and link.resolve() == (home / ".agents" / item).resolve()
     assert run(["git", "config", "--file", str(home / ".gitconfig.local"), "user.email"]).stdout.strip() == "work@example.com"
     assert run(["git", "config", "user.email"], env={"HOME": str(home)}).stdout.strip() == "work@example.com"
     assert "you@example.com" not in (repo / "profiles" / "default" / "gitconfig").read_text()
@@ -123,15 +126,15 @@ def test_gitignore_whitelists(tmp_path: Path) -> None:
     shutil.copy2(git_repo / "config.example.toml", git_repo / "config.toml")
     ac = git_repo / "agent-configs"
     for p, txt in ((git_repo / ".env", "SECRET=1\n"), (git_repo / "test.local.toml", "[core]\n"), (ac / "antigravity-cli" / "cli.log", "log\n"),
-                   (ac / "antigravity-cli" / "oauth-token", "tok\n"), (ac / "antigravity-config" / "mcp_config.json", "{}\n"), (ac / "antigravity-cli" / "brain" / "scratch.md", "tmp\n")):
+                   (ac / "antigravity-cli" / "oauth-token", "tok\n"), (ac / "antigravity-cli" / "brain" / "scratch.md", "tmp\n")):
         write_file(p, txt)
     status_out = run(["git", "-C", str(git_repo), "status", "--short"]).stdout
-    for ignored in ("config.toml", ".env", "test.local.toml", "cli.log", "oauth-token", "mcp_config.json", "brain/"):
+    for ignored in ("config.toml", ".env", "test.local.toml", "cli.log", "oauth-token", "brain/"):
         assert ignored not in status_out, f"Ignored path leaked into git status: {ignored}\n{status_out}"
     run(["git", "-C", str(git_repo), "add", "-A"])
     staged = set(run(["git", "-C", str(git_repo), "diff", "--cached", "--name-only"]).stdout.splitlines())
     for expected in ("bootstrap.sh", "Dockerfile", "config.example.toml", "tests/smoke_test.py", "agent-configs/.gitignore",
-                     "agent-configs/antigravity-cli/settings.json", "agent-configs/antigravity-config/AGENTS.md", "agent-configs/antigravity-config/skills.json"):
+                     "agent-configs/antigravity-cli/settings.json"):
         assert expected in staged, f"Missing expected tracked file: {expected}"
     print("PASS Test 7: git init + .gitignore / agent-configs/.gitignore whitelist tracks core & starter files")
 
