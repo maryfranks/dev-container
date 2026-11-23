@@ -20,6 +20,9 @@ profiles/*/gitconfig.local
 profiles/*/zshrc.local
 
 # Documentation & host provisioning not needed in the image build
+.github/
+Makefile
+docs/
 README.md
 plan.md
 agent-configs/README.md
