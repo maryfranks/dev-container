@@ -5,10 +5,6 @@
 # written to ~/.gitconfig.local by bootstrap.sh and included below.
 # =====================================================================
 
-[user]
-	name = Your Name
-	email = you@example.com
-
 [branch]
 	autoSetupRebase = always
 
