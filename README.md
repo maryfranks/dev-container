@@ -22,7 +22,7 @@ It includes sensible out-of-the-box defaults, arbitrary user-named profiles (or 
 3. **Configure sources, modules, username, and follow-up scripts in `config.toml`:**
    * Leave external repo/path fields blank to use this repo's built-in defaults (`shell/`, `profiles/default/`, `agent-configs/`).
    * Or configure `[sources]`, `[agents]`, and `[agents.<name>]` to bring your own dotfiles, agent repositories, and optional post-bootstrap setup script.
-   * **Customizing the container username:** `[core].username` (default `"dev"`) is passed as `--build-arg USERNAME=<name>` during image builds (`docker build` or `ansible/playbook.yaml --tags build`). Update `"remoteUser"` in `.devcontainer/devcontainer.json` to match whenever building with a `USERNAME` other than `dev`.
+   * **Customizing the container username:** `[core].username` (default `"dev"`, must match `^[a-z_][a-z0-9_-]*$`) is passed as `--build-arg USERNAME=<name>` during image builds (`docker build` or `ansible/playbook.yaml --tags build`). Update `"remoteUser"` in `.devcontainer/devcontainer.json` to match whenever building with a `USERNAME` other than `dev`.
 
 4. **Build and publish the container image (Docker Hub):**
    ```bash
@@ -55,13 +55,13 @@ Profiles are not locked to hardcoded names—define whatever profile names match
 
 ### 1. Individual File Symlinks vs. Whole-Directory Symlinks
 * **Individual file symlinks (`zshrc`, `gitconfig`, `starship.toml`, `vimrc`, `tmux.conf`):**
-  Linked as individual files so layered configurations compose cleanly. `$HOME/.zshrc` links to the resolved `profiles/<name>/zshrc`, which sources `shell/zshrc` (loading only enabled `[modules].languages` and `[modules].tools`, each guarded with `command -v` checks so missing binaries never cause startup errors) before applying profile overrides.
+  Linked as individual files so layered configurations compose cleanly. `$HOME/.zshrc` links to the resolved `profiles/<name>/zshrc`, which sources `shell/zshrc` (loading only enabled `[modules].languages` and `[modules].tools`—each validated against `^[A-Za-z0-9_-]+$` and guarded with `command -v` checks so missing binaries never cause startup errors) before applying profile overrides.
 * **Whole-directory symlinks (`~/.agents` and agent CLI config directories):**
   Linked as **entire directories** rather than individual files inside them. Coding agents frequently write, update, or atomically replace files inside their configuration directories at runtime—individual file symlinks break on atomic replacements and leave detached files behind.
 * **Backup safety:** If a target path already exists and is not already pointing to the expected source, `symlinks.sh` / `agents.sh` backs it up with a `.bak.<timestamp>` suffix before linking.
 
 ### 2. Layering & Resolution Precedence
-1. **External dotfiles (`[sources].dotfiles_repo` / `dotfiles_dir`):** Checked first for `profiles/<name>/{zshrc,gitconfig,starship.toml,vimrc,tmux.conf}`.
+1. **External dotfiles (`[sources].dotfiles_repo` / `dotfiles_dir`):** Checked first across `profiles/<name>/`, then `profiles/default/`, and finally `shell/` for `{zshrc,gitconfig,starship.toml,vimrc,tmux.conf}`.
 2. **Built-in profile & shell defaults:** Falls back to local/built-in `profiles/<name>/`, then `profiles/default/`, and finally shared defaults (`shell/vimrc`, `shell/tmux.conf`).
 3. **Shared agent bundle (`[agents]`):** Syncs agent-agnostic content (`AGENTS.md`, `skills/`, `roles/`, `rules/`, `templates/`) to `target_dir` (default `~/.agents`) as a whole-directory symlink when `repo` or `dir` is set. When both `repo` and `dir` are left blank, `agents.sh` initializes `~/.agents` with a minimal starter `AGENTS.md` and `skills/` directory if missing. Agent configs can reference shared instructions agnostically (for example, `@~/.agents/AGENTS.md`).
 4. **Agent CLI configurations (`agent-configs/` vs. BYO external repos):**

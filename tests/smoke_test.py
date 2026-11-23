@@ -39,18 +39,24 @@ def test_config_prerequisites(repo: Path) -> None:
 
     read_cfg = ["python3", "-B", str(repo / "scripts/read-config.py"), "--config", str(repo / "config.toml")]
     assert run([*read_cfg, "--get", "core.username"]).stdout.strip() == "dev"
-
     cfg_text = (repo / "config.toml").read_text().replace('default_profile = ""', 'default_profile = "default"', 1)
     cfg_text += '\n[profiles.work]\ngit_name = "Work User"\ngit_email = "work@example.com"\n\n[profiles.personal]\ngit_name = "Personal User"\ngit_email = "personal@example.com"\n'
     (repo / "config.toml").write_text(cfg_text)
-
     assert f"CFG_PROFILE={shlex.quote('default')}" in run(read_cfg).stdout.splitlines()
     assert f"CFG_PROFILE={shlex.quote('personal')}" in run(read_cfg, env={"PROFILE": "personal"}).stdout.splitlines()
     assert f"CFG_PROFILE={shlex.quote('work')}" in run([*read_cfg, "--profile", "work"], env={"PROFILE": "personal"}).stdout.splitlines()
-
     undef = run([*read_cfg, "--profile", "nonexistent"], check=False)
     assert undef.returncode != 0 and "is not defined" in undef.stderr, undef.stderr
-    print("PASS Test 3: --get core.username and strict profile precedence (--profile > PROFILE > default_profile)")
+    for label, toml, extra in (
+        ("username", '[core]\ndefault_profile = "default"\nusername = "BadUser"\n[profiles.default]\n', ["--get", "core.username"]),
+        ("languages", '[core]\ndefault_profile = "default"\n[profiles.default]\n[modules]\nlanguages = ["../evil"]\n', []),
+        ("tools", '[core]\ndefault_profile = "default"\n[profiles.default]\n[modules]\ntools = ["bad/tool"]\n', []),
+    ):
+        bad = write_file(repo / "bad.toml", toml)
+        for args in ([*read_cfg[:4], str(bad)], *([[*read_cfg[:4], str(bad), *extra]] if extra else [])):
+            res = run(args, check=False)
+            assert res.returncode != 0 and res.stderr.strip(), f"Expected failure for invalid {label}"
+    print("PASS Test 3: --get core.username, strict profile precedence, and input validation")
 
 def test_default_bootstrap_and_zsh(repo: Path, tmp_path: Path) -> None:
     """Verify built-in symlinks, .bak backups, idempotency, gitconfig.local, ~/.agents, and zsh."""
@@ -58,7 +64,6 @@ def test_default_bootstrap_and_zsh(repo: Path, tmp_path: Path) -> None:
     write_file(home / ".zshrc", "# pre-existing zshrc\n")
     write_file(home / ".gemini" / "antigravity-cli" / "stale.txt", "stale\n")
     run([str(repo / "bootstrap.sh"), "--profile", "work"], env={"HOME": str(home)})
-
     assert all((home / rel).is_symlink() and (home / rel).exists() for rel in (".zshrc", ".gitconfig", ".config/starship.toml", ".vimrc", ".tmux.conf"))
     assert (home / ".gemini" / "antigravity-cli").resolve() == (repo / "agent-configs" / "antigravity-cli").resolve()
     assert (home / ".gemini" / "config").resolve() == (repo / "agent-configs" / "antigravity-config").resolve()
@@ -68,13 +73,11 @@ def test_default_bootstrap_and_zsh(repo: Path, tmp_path: Path) -> None:
     assert run(["git", "config", "user.email"], env={"HOME": str(home)}).stdout.strip() == "work@example.com"
     assert "you@example.com" in (repo / "profiles" / "default" / "gitconfig").read_text()
     assert list(home.glob(".zshrc.bak.*")) and list((home / ".gemini").glob("antigravity-cli.bak.*"))
-
     bak_before = sorted(str(p) for p in home.rglob("*.bak.*"))
     time.sleep(1.1)
     run([str(repo / "bootstrap.sh"), "--profile", "work"], env={"HOME": str(home)})
     assert bak_before == sorted(str(p) for p in home.rglob("*.bak.*")), "Idempotent re-run created extra backups"
     print("PASS Test 4: Default symlinks, .bak backups, idempotency, gitconfig.local, ~/.agents, agent-configs")
-
     assert "ZSH_OK" in run(["zsh", "-c", "source ~/.zshrc && echo ZSH_OK"], env={"HOME": str(home)}).stdout
     assert "ZSH_MIN_OK" in run(["zsh", "-c", "source ~/.zshrc && echo ZSH_MIN_OK"], env={"HOME": str(home), "PATH": "/bin:/usr/bin"}).stdout
     print("PASS Test 5: Zsh startup clean under full PATH and restricted PATH")
@@ -83,18 +86,16 @@ def test_byo_external_sources(repo: Path, tmp_path: Path) -> None:
     """Verify BYO dotfiles precedence, external ~/.agents, agent-configs isolation, [env], and post_setup_script."""
     home = tmp_path / "home_byo"; home.mkdir()
     ext_dot, ext_agents, ext_cfg = tmp_path / "ext_dotfiles", tmp_path / "ext_agents", tmp_path / "ext_agent_cfg"
-
     write_file(ext_dot / "profiles" / "work" / "zshrc", "# external work zshrc\n")
     write_file(ext_dot / "profiles" / "default" / "gitconfig", "# external default gitconfig\n")
+    write_file(ext_dot / "shell" / "tmux.conf", "# external shell tmux\n")
     write_file(repo / "profiles" / "work" / "gitconfig", "# local work gitconfig\n")
     post_sh = write_file(ext_dot / "post.sh", '#!/usr/bin/env bash\necho "ran:$DEVCONTAINER_PROFILE" > "$HOME/.post_setup_marker"\n')
     post_sh.chmod(0o755)
-
     (ext_agents / "skills").mkdir(parents=True)
     write_file(ext_agents / "AGENTS.md", "# external shared agents\n")
     for sub, fname, content in (("agy-cli", "settings.json", '{"external": true}\n'), ("agy-cfg", "AGENTS.md", "@~/.agents/AGENTS.md\n"), ("claude", "CLAUDE.md", "extra\n")):
         write_file(ext_cfg / sub / fname, content)
-
     byo_cfg = write_file(
         repo / "config.byo.toml",
         f'[core]\ndefault_profile = "work"\nusername = "dev"\n\n[profiles.work]\ngit_name = "BYO User"\ngit_email = "byo@example.com"\n\n'
@@ -103,9 +104,9 @@ def test_byo_external_sources(repo: Path, tmp_path: Path) -> None:
         f'settings = "agy-cli"\nconfig = "agy-cfg"\nextra_config_dir_1 = "claude"\n'
         f'target_settings_dir = "~/.gemini/antigravity-cli"\ntarget_config_dir = "~/.gemini/config"\ntarget_extra_dir_1 = "~/.claude"\n\n[env]\nSAMPLE_FLAG = "enabled"\n',
     )
-
     run([str(repo / "bootstrap.sh"), "--config", str(byo_cfg)], env={"HOME": str(home)})
-    for dst, src in ((".zshrc", ext_dot / "profiles/work/zshrc"), (".gitconfig", repo / "profiles/work/gitconfig"), (".vimrc", repo / "shell/vimrc"),
+    for dst, src in ((".zshrc", ext_dot / "profiles/work/zshrc"), (".gitconfig", ext_dot / "profiles/default/gitconfig"),
+                     (".tmux.conf", ext_dot / "shell/tmux.conf"), (".vimrc", repo / "shell/vimrc"),
                      (".gemini/antigravity-cli", ext_cfg / "agy-cli"), (".gemini/config", ext_cfg / "agy-cfg"), (".claude", ext_cfg / "claude")):
         assert (home / dst).resolve() == src.resolve()
     assert (home / ".agents").is_symlink() and (home / ".agents").resolve() == ext_agents.resolve()

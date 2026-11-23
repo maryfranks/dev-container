@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 
 ENV_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+USERNAME_RE = re.compile(r"^[a-z_][a-z0-9_-]*$")
+MODULE_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 AGENT_FIELDS = (
     ("config_repo", "CONFIG_REPO"), ("config_dir", "CONFIG_DIR"), ("settings", "SETTINGS"),
     ("config", "CONFIG"), ("extra_config_dir_1", "EXTRA_1"), ("extra_config_dir_2", "EXTRA_2"),
@@ -54,9 +56,22 @@ def get_str_list(table: dict[str, Any], key: str, context: str) -> list[str]:
         if not isinstance(item, str): fail(f"Expected string items in [{context}].{key}, got {type(item).__name__}.")
     return [item.strip() for item in val if item.strip()]
 
+def get_username(core: dict[str, Any]) -> str:
+    """Read and validate [core].username, defaulting to 'dev'."""
+    username = get_str(core, "username", "dev") or "dev"
+    if not USERNAME_RE.fullmatch(username): fail(f"Invalid [core].username '{username}': must match ^[a-z_][a-z0-9_-]*$.")
+    return username
+
+def get_module_list(modules: dict[str, Any], key: str) -> list[str]:
+    """Read and validate module names from [modules].languages or [modules].tools."""
+    items = get_str_list(modules, key, "modules")
+    for item in items:
+        if not MODULE_RE.fullmatch(item): fail(f"Invalid module name '{item}' in [modules].{key}: must match ^[A-Za-z0-9_-]+$.")
+    return items
+
 def resolve_dotted_key(data: dict[str, Any], dotted_key: str) -> str:
     """Resolve a dotted key for --get queries without requiring profile selection."""
-    if dotted_key == "core.username": return get_str(get_table(data, "core", "core"), "username", "dev") or "dev"
+    if dotted_key == "core.username": return get_username(get_table(data, "core", "core"))
     cur: Any = data
     for part in dotted_key.split("."):
         if not isinstance(cur, dict) or part not in cur: fail(f"Configuration key '{dotted_key}' not found.")
@@ -100,12 +115,12 @@ def emit_shell(repo_dir: Path, config_path: Path, data: dict[str, Any], cli_prof
     q = shlex.quote
     lines = [
         f"CFG_REPO_DIR={q(str(repo_dir))}", f"CFG_CONFIG_PATH={q(str(config_path))}",
-        f"CFG_PROFILE={q(profile_name)}", f"CFG_USERNAME={q(get_str(core, 'username', 'dev') or 'dev')}",
+        f"CFG_PROFILE={q(profile_name)}", f"CFG_USERNAME={q(get_username(core))}",
         f"CFG_GIT_NAME={q(get_str(profile_data, 'git_name'))}", f"CFG_GIT_EMAIL={q(get_str(profile_data, 'git_email'))}",
         f"CFG_DOTFILES_REPO={q(get_str(sources, 'dotfiles_repo'))}", f"CFG_DOTFILES_DIR={q(get_str(sources, 'dotfiles_dir'))}",
         f"CFG_POST_SETUP_SCRIPT={q(get_str(sources, 'post_setup_script'))}",
-        shell_array("CFG_MODULES_LANGUAGES", get_str_list(modules, "languages", "modules")),
-        shell_array("CFG_MODULES_TOOLS", get_str_list(modules, "tools", "modules")),
+        shell_array("CFG_MODULES_LANGUAGES", get_module_list(modules, "languages")),
+        shell_array("CFG_MODULES_TOOLS", get_module_list(modules, "tools")),
         f"CFG_AGENTS_REPO={q(get_str(agents_root, 'repo'))}", f"CFG_AGENTS_DIR={q(get_str(agents_root, 'dir'))}",
         f"CFG_AGENTS_TARGET_DIR={q(get_str(agents_root, 'target_dir', '~/.agents') or '~/.agents')}",
         shell_array("CFG_ENV_KEYS", env_keys), shell_array("CFG_ENV_VALS", env_vals),
