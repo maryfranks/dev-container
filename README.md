@@ -43,3 +43,7 @@ The goal is a fully portable dev container setup that runs anywhere with any com
 * Secrets management: A clean way to pass secrets into standalone containers (like 1Password CLI `op` with a gitignored env file). Currently all secret management is handled by the platform providers: GitHub and prized.dev.
 * Bare VM provisioning: Extending `ansible/playbook.yaml` to install Docker and the Dev Containers CLI from scratch on fresh hosts.
 * A better way to manage tool configs.
+
+## A note on AI usage in this project
+
+I used an agent to extract and sanitize the configs for this repo. It's a simplified version of the way I organize my environment and once it was standalone, I had to make some changes for it to work. I also incorporated some learnings from the fresh container in prized.dev. I generated the first draft of the documentation with agents, but even though I asked it twice to use less jargon and a more approachable tone, the "plainspoken voice" (which is how agent described it) was terrible. It writes a great, very technically precise architecture document, but the README I still mostly writes by hand.

@@ -1,4 +1,4 @@
-name: Lint and Test
+name: Smoke Test
 
 on:
   push:
