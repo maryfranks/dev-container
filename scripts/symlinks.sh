@@ -36,11 +36,17 @@ elif [[ -n "$CFG_DOTFILES_REPO" ]]; then
     EXTERNAL_DOTFILES_DIR="$HOME/.local/share/devcontainer/dotfiles"
 fi
 
-# Precedence: external profiles/<name> -> local profiles/<name> -> profiles/default -> shell/
+# Precedence: external (profiles/<name> -> profiles/default -> shell/) -> repo (profiles/<name> -> profiles/default -> shell/)
 resolve_file() {
     local filename="$1"
     local candidates=()
-    [[ -n "$EXTERNAL_DOTFILES_DIR" ]] && candidates+=("$EXTERNAL_DOTFILES_DIR/profiles/$CFG_PROFILE/$filename")
+    if [[ -n "$EXTERNAL_DOTFILES_DIR" ]]; then
+        candidates+=(
+            "$EXTERNAL_DOTFILES_DIR/profiles/$CFG_PROFILE/$filename"
+            "$EXTERNAL_DOTFILES_DIR/profiles/default/$filename"
+            "$EXTERNAL_DOTFILES_DIR/shell/$filename"
+        )
+    fi
     candidates+=(
         "$REPO_DIR/profiles/$CFG_PROFILE/$filename"
         "$REPO_DIR/profiles/default/$filename"
