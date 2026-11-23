@@ -25,7 +25,6 @@ Makefile
 docs/
 README.md
 plan.md
-agent-configs/README.md
 ansible/
 tests/
 

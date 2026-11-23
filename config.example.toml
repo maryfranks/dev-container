@@ -68,16 +68,18 @@ tools = ["fzf", "uv"]
 # Agent-agnostic shared content bundle: AGENTS.md, skills/, roles/, rules/, templates/
 # Example: an agent config can reference `@~/.agents/AGENTS.md` to stay agnostic.
 # Leave `repo` and `dir` blank to initialize a minimal local `~/.agents` directory
-# (`AGENTS.md` and `skills/`) if missing; set them to clone/link an external
+# (`AGENTS.md`, `skills/`, and `roles/`) if missing; set them to clone/link an external
 # shared agents repository into `target_dir` as a whole directory.
 repo = ""
 dir = ""
 target_dir = "~/.agents"
 
 # Agent CLI configurations:
-# - When `config_repo` and `config_dir` are blank, `agents.sh` symlinks target CLI
-#   paths to this repo's built-in defaults (`agent-configs/antigravity-cli` and
-#   `agent-configs/antigravity-config`).
+# - When `config_repo` and `config_dir` are blank, `agents.sh` symlinks `settings`
+#   to this repo's built-in default (`agent-configs/antigravity-cli`). When
+#   `[agents.agy].config` is blank and `target_config_dir` is set, `~/.gemini/config`
+#   is created as a real directory with `skills`, `roles`, and `AGENTS.md`
+#   symlinked from `~/.agents`.
 # - When `config_repo` or `config_dir` is set, `agents.sh` skips `agent-configs/`
 #   completely and symlinks target CLI paths directly to your external repo/dir
 #   so this repository's `git status` stays clean.
