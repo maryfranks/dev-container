@@ -4,6 +4,7 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 CONFIG_PATH="$REPO_DIR/config.toml"
 CLI_PROFILE=""
+IF_CONFIGURED=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -11,10 +12,17 @@ while [[ $# -gt 0 ]]; do
         --profile) [[ $# -ge 2 ]] || { echo "Error: --profile requires a value." >&2; exit 1; }; CLI_PROFILE="$2"; shift 2 ;;
         --config=*) CONFIG_PATH="${1#*=}"; shift ;;
         --config) [[ $# -ge 2 ]] || { echo "Error: --config requires a value." >&2; exit 1; }; CONFIG_PATH="$2"; shift 2 ;;
-        -h|--help) echo "Usage: ./bootstrap.sh [--profile <name>] [--config <path>]"; exit 0 ;;
+        --if-configured) IF_CONFIGURED=true; shift ;;
+        -h|--help) echo "Usage: ./bootstrap.sh [--profile <name>] [--config <path>] [--if-configured]"; exit 0 ;;
         *) echo "Error: Unknown argument: $1" >&2; exit 1 ;;
     esac
 done
+
+if [[ "$IF_CONFIGURED" == true && ! -f "$CONFIG_PATH" ]]; then
+    echo "Notice: $CONFIG_PATH not found; skipping bootstrap (--if-configured)."
+    echo "To configure, run: cp config.example.toml config.toml, edit it, then run ./bootstrap.sh"
+    exit 0
+fi
 
 READ_ARGS=(--config "$CONFIG_PATH")
 [[ -n "$CLI_PROFILE" ]] && READ_ARGS+=(--profile "$CLI_PROFILE")

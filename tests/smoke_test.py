@@ -30,7 +30,9 @@ def test_config_prerequisites(repo: Path) -> None:
     """Verify missing config.toml, empty default_profile, --get, and strict precedence."""
     missing = run([str(repo / "bootstrap.sh")], check=False)
     assert missing.returncode != 0 and "cp config.example.toml config.toml" in missing.stderr, missing.stderr
-    print("PASS Test 1: Missing config.toml fails with copy instruction")
+    graceful = run([str(repo / "bootstrap.sh"), "--if-configured"], check=False)
+    assert graceful.returncode == 0 and "cp config.example.toml config.toml" in graceful.stdout, graceful.stdout + graceful.stderr
+    print("PASS Test 1: Missing config.toml fails directly and exits 0 with --if-configured")
 
     shutil.copy2(repo / "config.example.toml", repo / "config.toml")
     empty = run([str(repo / "bootstrap.sh")], check=False)
@@ -71,11 +73,11 @@ def test_default_bootstrap_and_zsh(repo: Path, tmp_path: Path) -> None:
     assert (home / ".agents" / "skills").is_dir() and (home / ".agents" / "AGENTS.md").is_file()
     assert run(["git", "config", "--file", str(home / ".gitconfig.local"), "user.email"]).stdout.strip() == "work@example.com"
     assert run(["git", "config", "user.email"], env={"HOME": str(home)}).stdout.strip() == "work@example.com"
-    assert "you@example.com" in (repo / "profiles" / "default" / "gitconfig").read_text()
+    assert "you@example.com" not in (repo / "profiles" / "default" / "gitconfig").read_text()
     assert list(home.glob(".zshrc.bak.*")) and list((home / ".gemini").glob("antigravity-cli.bak.*"))
     bak_before = sorted(str(p) for p in home.rglob("*.bak.*"))
     time.sleep(1.1)
-    run([str(repo / "bootstrap.sh"), "--profile", "work"], env={"HOME": str(home)})
+    run([str(repo / "bootstrap.sh"), "--profile", "work", "--if-configured"], env={"HOME": str(home)})
     assert bak_before == sorted(str(p) for p in home.rglob("*.bak.*")), "Idempotent re-run created extra backups"
     print("PASS Test 4: Default symlinks, .bak backups, idempotency, gitconfig.local, ~/.agents, agent-configs")
     assert "ZSH_OK" in run(["zsh", "-c", "source ~/.zshrc && echo ZSH_OK"], env={"HOME": str(home)}).stdout
@@ -123,11 +125,9 @@ def test_gitignore_whitelists(tmp_path: Path) -> None:
     for p, txt in ((git_repo / ".env", "SECRET=1\n"), (git_repo / "test.local.toml", "[core]\n"), (ac / "antigravity-cli" / "cli.log", "log\n"),
                    (ac / "antigravity-cli" / "oauth-token", "tok\n"), (ac / "antigravity-config" / "mcp_config.json", "{}\n"), (ac / "antigravity-cli" / "brain" / "scratch.md", "tmp\n")):
         write_file(p, txt)
-
     status_out = run(["git", "-C", str(git_repo), "status", "--short"]).stdout
     for ignored in ("config.toml", ".env", "test.local.toml", "cli.log", "oauth-token", "mcp_config.json", "brain/"):
         assert ignored not in status_out, f"Ignored path leaked into git status: {ignored}\n{status_out}"
-
     run(["git", "-C", str(git_repo), "add", "-A"])
     staged = set(run(["git", "-C", str(git_repo), "diff", "--cached", "--name-only"]).stdout.splitlines())
     for expected in ("bootstrap.sh", "Dockerfile", "config.example.toml", "tests/smoke_test.py", "agent-configs/.gitignore",

@@ -17,6 +17,6 @@
       }
     }
   },
-  "postCreateCommand": "./bootstrap.sh",
+  "postCreateCommand": "./bootstrap.sh --if-configured",
   "waitFor": "postCreateCommand"
 }

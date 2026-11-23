@@ -6,7 +6,7 @@ It includes sensible out-of-the-box defaults, arbitrary user-named profiles (or 
 
 ## Quick Start
 
-> **Important Prerequisite:** Nothing works unless `config.toml` exists and a profile is configured **before** you build or launch the container. `bootstrap.sh` (via `scripts/read-config.py`) will exit immediately with an explicit terminal error if `config.toml` is missing or no profile is resolved.
+> **Important Prerequisite:** Create `config.toml` and configure a profile before running `./bootstrap.sh` directly. Direct runs of `./bootstrap.sh` exit immediately with an error if `config.toml` is missing or no profile is resolved. When `--if-configured` is passed (used by `postCreateCommand` in `.devcontainer/devcontainer.json`), a missing `config.toml` prints a setup notice and exits `0` instead of failing container creation.
 
 1. **Copy the example config before launching:**
    ```bash
@@ -33,7 +33,7 @@ It includes sensible out-of-the-box defaults, arbitrary user-named profiles (or 
 
 5. **Launch in your devcontainer runtime:**
    * Open the repository in **GitHub Codespaces** or run with the Dev Containers CLI on a **`prized.dev`** box (or another host with the Dev Containers CLI installed).
-   * `postCreateCommand` runs `bootstrap.sh` automatically on container creation (with `"waitFor": "postCreateCommand"` so setup finishes before attaching).
+   * `postCreateCommand` runs `./bootstrap.sh --if-configured` automatically on container creation (with `"waitFor": "postCreateCommand"` so setup finishes before attaching). When `config.toml` exists, full bootstrap runs; when `config.toml` is missing (such as a fresh GitHub Codespaces clone), it prints a setup notice and exits `0`.
    * **Re-applying changes later:** Because `postCreateCommand` runs only when a container is created, re-run `./bootstrap.sh` (or `./bootstrap.sh --profile <name>`) manually inside the container whenever you edit `config.toml` or update external repos.
 
 ## Profiles: Why Use Them & How They Work
@@ -49,7 +49,7 @@ Profiles are not locked to hardcoded names—define whatever profile names match
 1. `--profile <name>` flag passed to `bootstrap.sh`
 2. `PROFILE` environment variable
 3. `[core].default_profile` in `config.toml`
-4. If `config.toml` is missing or no profile is set, `bootstrap.sh` exits immediately with an explicit error prompting you to create `config.toml` and specify a profile.
+4. If `config.toml` is missing (without `--if-configured`) or no profile is set, `bootstrap.sh` exits immediately with an explicit error prompting to create `config.toml` and specify a profile.
 
 ## How Configs Layer, Symlink & Compose
 
