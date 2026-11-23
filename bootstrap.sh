@@ -21,39 +21,10 @@ READ_ARGS=(--config "$CONFIG_PATH")
 config_eval="$(python3 -B "$REPO_DIR/scripts/read-config.py" "${READ_ARGS[@]}")"
 eval "$config_eval"
 
-expand_path() {
-    case "$1" in
-        "~") printf '%s\n' "$HOME" ;;
-        "~/"*) printf '%s\n' "$HOME/${1:2}" ;;
-        *) printf '%s\n' "$1" ;;
-    esac
-}
+source "$REPO_DIR/scripts/lib.sh"
 
 shell_single_quote() {
     printf "'%s'" "${1//\'/\'\\\'\'}"
-}
-
-sync_git_repo() {
-    local repo_url="$1" dest_dir="$2"
-    if [[ -d "$dest_dir/.git" ]]; then
-        if git -C "$dest_dir" pull --ff-only >/dev/null 2>&1; then
-            echo "[git]    Updated $dest_dir"
-        else
-            echo "[warn]   Could not fast-forward pull $dest_dir; continuing with existing checkout." >&2
-        fi
-        return 0
-    fi
-    if [[ -e "$dest_dir" || -L "$dest_dir" ]]; then
-        if [[ -d "$dest_dir" && -z "$(ls -A "$dest_dir")" ]]; then
-            rmdir "$dest_dir"
-        else
-            echo "Error: Destination '$dest_dir' already exists and is not a git repository for '$repo_url'." >&2
-            exit 1
-        fi
-    fi
-    mkdir -p "$(dirname "$dest_dir")"
-    git clone "$repo_url" "$dest_dir"
-    echo "[git]    Cloned $repo_url -> $dest_dir"
 }
 
 echo "==> Bootstrapping profile '$CFG_PROFILE' from $CFG_CONFIG_PATH"
