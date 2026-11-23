@@ -9,7 +9,7 @@ It ships with sensible defaults out of the box—arbitrary user-named profiles, 
 * `Dockerfile` and `.devcontainer/devcontainer.json`: Base image definition (non-root user, `zsh`, `git`, `gh`, `node`, `python3`, `uv`, `starship`, `fzf`, and Antigravity CLI `agy`) and container runtime configuration pointing to a prebuilt registry image.
 * `bootstrap.sh` and `scripts/`: Runtime entrypoint, `config.toml` parser (`scripts/read-config.py`), file-level symlink resolver (`scripts/symlinks.sh`), and directory-level agent configurator (`scripts/agents.sh`).
 * `shell/` and `profiles/`: Baseline `zsh`, `git`, `starship`, `vim`, and `tmux` layers, plus guarded language and tool modules (`shell/languages/`, `shell/tools/`).
-* `agent-configs/`: Starter `agy` configurations (`antigravity-cli/` and `antigravity-config/`) protected by a whitelisted `.gitignore`.
+* `agent-configs/`: Starter `agy` settings (`antigravity-cli/`) protected by a whitelisted `.gitignore`.
 * `ansible/`: Playbook and example inventory for building images and launching containers on `prized.dev` or other Dev Containers CLI hosts.
 
 ## Quick Start
@@ -29,7 +29,7 @@ For full setup instructions, profile resolution rules, and `prized.dev` / Codesp
 I kept the build-time image and runtime configuration strictly separated so the same prebuilt container image works across different machines, profiles, and external repositories without baking personal state into image layers.
 
 * **Build-time vs. runtime:** `Dockerfile` installs immutable system tools and creates the user; `bootstrap.sh` runs at container creation to clone external repos, write runtime exports to `~/.config/devcontainer/runtime.zsh`, and wire symlinks.
-* **Two symlink models:** Shell and editor configs (`zshrc`, `gitconfig`, `starship.toml`, `vimrc`, `tmux.conf`) link as individual files for layered composition, whereas `~/.agents` and agent CLI directories link as whole directories because coding agents write and atomically replace files at runtime.
+* **Two symlink models:** Shell and editor configs (`zshrc`, `gitconfig`, `starship.toml`, `vimrc`, `tmux.conf`) link as individual files for layered composition, whereas `~/.agents` and agent CLI directories (such as `~/.gemini/antigravity-cli`) link as whole directories because coding agents write and atomically replace files at runtime. When `[agents.agy].config` is blank, `~/.gemini/config` is created as a real directory with `skills`, `roles`, and `AGENTS.md` symlinked into it from `~/.agents`.
 * **External-first precedence:** `scripts/symlinks.sh` checks external dotfiles (`profiles/<name>/` -> `profiles/default/` -> `shell/`) before falling back to this repository's built-in layers. When `config_repo` or `config_dir` is set for an agent, `scripts/agents.sh` skips `agent-configs/` entirely.
 * **No built-in secret store:** Credentials stay out of the repo and image; GitHub Codespaces handles GitHub auth natively, and `prized.dev` hosts rely on Secure Shell (SSH) agent forwarding (`SSH_AUTH_SOCK`).
 

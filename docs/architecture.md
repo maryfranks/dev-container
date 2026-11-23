@@ -71,36 +71,32 @@ Shell module loaders in `shell/zshrc` (`_devcontainer_load_modules`) follow the 
 ### Shared Agent Bundle (`[agents]`)
 
 * External mode (`[agents].repo` or `[agents].dir` set): `scripts/agents.sh` clones/pulls `repo` into `$HOME/.local/share/devcontainer/agents` (unless `dir` overrides the path) and symlinks `target_dir` (default `~/.agents`) as a whole directory to that source.
-* Built-in initialization (`repo` and `dir` blank): `scripts/agents.sh` creates `$target_dir/skills` and writes a starter `$target_dir/AGENTS.md` if missing.
-* Built-in `agent-configs/antigravity-config/AGENTS.md` includes `@~/.agents/AGENTS.md`, and `agent-configs/antigravity-config/skills.json` references `~/.agents/skills`.
+* Built-in initialization (`repo` and `dir` blank): `scripts/agents.sh` creates `$target_dir/skills` and `$target_dir/roles`, and writes a starter `$target_dir/AGENTS.md` if missing.
+* When `[agents.agy].config` is blank and `target_config_dir` (`~/.gemini/config`) is set, `scripts/agents.sh` ensures `target_config_dir` is a real directory (backing up any pre-existing symlink or non-directory) and symlinks `skills`, `roles`, and `AGENTS.md` from `$CFG_AGENTS_TARGET_DIR` (`~/.agents`) into it.
 
 ### Agent CLI Configurations (`[agents.<name>]`)
 
 Each `[agents.<name>]` table with `enabled = true` maps up to four directory slots: `settings` -> `target_settings_dir`, `config` -> `target_config_dir`, `extra_config_dir_1` -> `target_extra_dir_1`, and `extra_config_dir_2` -> `target_extra_dir_2`.
 
-* Built-in mode (`config_repo` and `config_dir` blank): Relative slot paths resolve against the repository root (defaulting to `agent-configs/antigravity-cli` and `agent-configs/antigravity-config` for `agy`).
+* Built-in mode (`config_repo` and `config_dir` blank): Relative slot paths resolve against the repository root (defaulting `settings` to `agent-configs/antigravity-cli` for `agy`, with `config = ""` linking `skills`, `roles`, and `AGENTS.md` from `~/.agents` into `~/.gemini/config`).
 * External mode (`config_repo` or `config_dir` set): `scripts/agents.sh` clones/pulls `config_repo` into `$HOME/.local/share/devcontainer/agent-configs-<name>` (unless `config_dir` is set), skips `agent-configs/` completely, and resolves relative slot paths against the external directory. `assert_not_builtin_agent_configs` rejects any path resolving inside `agent-configs/`.
 
 ## `agent-configs/` Multi-Step `.gitignore` Whitelist
 
-In built-in mode, runtime writes from `agy` land inside `agent-configs/antigravity-cli/` and `agent-configs/antigravity-config/`. To keep `git status` clean while tracking starter files, `agent-configs/.gitignore` applies a four-step whitelist:
+In built-in mode, runtime writes from `agy` land inside `agent-configs/antigravity-cli/`. To keep `git status` clean while tracking starter files, `agent-configs/.gitignore` applies a four-step whitelist:
 
 ```gitignore
 *
 !.gitignore
 !antigravity-cli/
-!antigravity-config/
 antigravity-cli/*
-antigravity-config/*
 !antigravity-cli/settings.json
-!antigravity-config/skills.json
-!antigravity-config/AGENTS.md
 ```
 
 1. `*` ignores all entries by default.
-2. `!.gitignore`, `!antigravity-cli/`, and `!antigravity-config/` un-ignore `.gitignore` and the target subdirectories so Git descends into them.
-3. `antigravity-cli/*` and `antigravity-config/*` ignore all wildcard contents generated at runtime inside each subdirectory.
-4. Explicit negations (`!antigravity-cli/settings.json`, `!antigravity-config/skills.json`, `!antigravity-config/AGENTS.md`) whitelist only the tracked starter files.
+2. `!.gitignore` and `!antigravity-cli/` un-ignore `.gitignore` and the target subdirectory so Git descends into it.
+3. `antigravity-cli/*` ignores all wildcard contents generated at runtime inside the subdirectory.
+4. Explicit negations (`!antigravity-cli/settings.json`) whitelist only the tracked starter file.
 
 ## Runtime and Secrets Boundaries
 
